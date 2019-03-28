@@ -1,0 +1,28 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+
+Transform: AWS::Serverless-2016-10-31
+
+Resources:
+  EmailPipe:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: EmailSendPipeline
+      VisibilityTimeout: 10
+  
+  TemplateBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: go-mail-template
+
+  BuildEmailFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: main
+      Runtime: go1.x
+      Events:
+        SQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt EmailPipe.Arn
+

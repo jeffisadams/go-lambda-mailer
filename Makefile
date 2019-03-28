@@ -1,8 +1,7 @@
 OUTPUT = main # Referenced as Handler in template.yaml
-PACKAGED_TEMPLATE = cloudformation_deploy.yaml
+PACKAGED_TEMPLATE = template_deploy.yaml
 S3_BUCKET := $(S3_BUCKET)
 STACK_NAME := $(STACK_NAME)
-TEMPLATE = cloudformation.yaml
 
 .PHONY: install
 install:
@@ -23,14 +22,31 @@ lambda:
 .PHONY: build
 build: clean lambda
 
-.PHONY: api
-api: build
-	sam local start-api -t $(TEMPLATE)
+# .PHONY: api
+# api: build
+# 	sam local start-api
 
 .PHONY: package
-package: build
-	sam package --template-file $(TEMPLATE) --s3-bucket $(S3_BUCKET) --output-template-file $(PACKAGED_TEMPLATE)
+package:
+	aws package \
+		--s3-bucket $(S3_BUCKET) \
+		--output-template-file $(PACKAGED_TEMPLATE) \
 
 .PHONY: deploy
 deploy: package
-	sam deploy --stack-name $(STACK_NAME) --template-file $(PACKAGED_TEMPLATE) --capabilities CAPABILITY_IAM
+	aws deploy \
+		--template-file $(PACKAGED_TEMPLATE) \
+		--stack-name $(STACK_NAME) \
+		--no-fail-on-empty-changeset \
+		--capabilities CAPABILITY_IAM
+
+.PHONY: teardown
+teardown: clean
+	aws cloudformation delete-stack --stack-name $(STACK_NAME)
+
+
+# Sync the templates folder with the bucket
+#	Only works after deployment
+.PHONY: sync-templates
+sync-templates:
+	aws s3 sync templates/ s3://go-mail-template/
